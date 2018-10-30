@@ -150,7 +150,7 @@ public class ManagedTest {
         assertThat(t.isSuccess(), equalTo(true));
         assertThat(t.map(f->f.orElse("world")).orElse("world"),equalTo("HELLO"));
     }
-    public Managed<Future<String>> acquireNamed(String name){
+    public static Managed<Future<String>> acquireNamed(String name){
         return Managed.managed(Future.of(() -> {
             System.out.println("Acquiring " + name);
             return name.toUpperCase();
