@@ -6,6 +6,7 @@ import com.oath.cyclops.types.foldable.To;
 import com.oath.cyclops.types.functor.Transformable;
 import com.oath.cyclops.types.reactive.ValueSubscriber;
 import com.oath.cyclops.util.ExceptionSoftener;
+import com.sun.tools.javac.comp.Check;
 import cyclops.control.Either;
 import cyclops.control.Eval;
 import cyclops.control.Future;
@@ -109,9 +110,12 @@ public interface IO<T> extends To<IO<T>>,Higher<io,T>,ReactiveTransformable<T>,P
         return flatMap(i->sync(s.apply(i)));
     }
 
-    default <R> IO<R> mergeMap(Function<? super T, Publisher<? extends R>> s){
-        return flatMap(i->fromPublisher(s.apply(i)));
+    default <R> IO<R> checkedConcatMap(CheckedFunction<? super T, Iterable<? extends R>> s){
+        return flatMap(i->sync(s.apply(i)));
     }
+
+    <R> IO<R> mergeMap(int maxConcurrency,Function<? super T, Publisher<? extends R>> s);
+
     default <R> IO<R> checkedRetry(CheckedFunction<? super T,? extends R> checkedFunction){
         return retry(ExceptionSoftener.softenFunction(checkedFunction));
     }
@@ -686,6 +690,10 @@ public interface IO<T> extends To<IO<T>>,Higher<io,T>,ReactiveTransformable<T>,P
             return fromPublisher(Spouts.from(fn).mergeMap(t -> s.apply(t).publisher()));
         }
 
+        @Override
+        public <R> IO<R> mergeMap(int maxConcurrency, Function<? super T, Publisher<? extends R>> s) {
+            return fromPublisher(Spouts.from(fn).mergeMap(maxConcurrency,t -> s.apply(t)));
+        }
 
 
         @Override
@@ -787,6 +795,11 @@ public interface IO<T> extends To<IO<T>>,Higher<io,T>,ReactiveTransformable<T>,P
         @Override
         public <R> IO<R> flatMap(Function<? super T, IO<? extends R>> s) {
             return new SyncIO<R>(fn.mergeMap(s));
+        }
+
+        @Override
+        public <R> IO<R> mergeMap(int maxConcurrency, Function<? super T, Publisher<? extends R>> s) {
+            return new SyncIO<R>(fn.mergeMap(maxConcurrency,s));
         }
 
         @Override
