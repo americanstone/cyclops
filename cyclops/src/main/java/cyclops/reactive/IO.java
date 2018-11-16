@@ -111,7 +111,7 @@ public interface IO<T> extends To<IO<T>>,Higher<io,T>,ReactiveTransformable<T>,P
     }
 
     default <R> IO<R> checkedConcatMap(CheckedFunction<? super T, Iterable<? extends R>> s){
-        return flatMap(i->sync(s.apply(i)));
+        return concatMap(ExceptionSoftener.softenFunction(s));
     }
 
     <R> IO<R> mergeMap(int maxConcurrency,Function<? super T, Publisher<? extends R>> s);
